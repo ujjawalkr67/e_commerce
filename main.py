@@ -19,28 +19,25 @@ from models import (
 # Initialize FastAPI app
 app = FastAPI(
     title="Ecommerce Backend API",
-    description="A sample ecommerce backend built with FastAPI and MongoDB",
     version="1.0.0"
 )
 
 load_dotenv()
 
-# --- MongoDB Connection ---
-# Retrieve individual components from environment variables
 MONGO_USERNAME = os.getenv("MONGO_USERNAME")
 MONGO_PASSWORD = os.getenv("MONGO_PASSWORD")
 MONGO_CLUSTER_URL = os.getenv("MONGO_CLUSTER_URL")
 MONGO_APP_NAME = os.getenv("MONGO_APP_NAME")
-MONGO_DATABASE_NAME = os.getenv("MONGO_DATABASE_NAME") # For the default database connection
+MONGO_DATABASE_NAME = os.getenv("MONGO_DATABASE_NAME")
 
-# Validate that all required environment variables are set
+
 if not all([MONGO_USERNAME, MONGO_PASSWORD, MONGO_CLUSTER_URL, MONGO_APP_NAME, MONGO_DATABASE_NAME]):
     raise ValueError("One or more MongoDB environment variables (MONGO_USERNAME, MONGO_PASSWORD, MONGO_CLUSTER_URL, MONGO_APP_NAME, MONGO_DATABASE_NAME) are not set. Please check your .env file.")
 
-# URL-encode the password
+
 encoded_password = quote_plus(MONGO_PASSWORD)
 
-# Construct the MongoDB URI
+
 MONGO_URI = f"mongodb+srv://{MONGO_USERNAME}:{encoded_password}@{MONGO_CLUSTER_URL}/?retryWrites=true&w=majority&appName={MONGO_APP_NAME}"
 
 try:
@@ -68,14 +65,12 @@ async def create_product(product: ProductCreate):
         # Convert Pydantic model to dict, ensuring sizes are correctly structured
         product_dict = product.model_dump(by_alias=True) # Use model_dump to get dictionary, by_alias=True to use aliases if any
 
-        # Add timestamp for creation
         product_dict["created_at"] = datetime.utcnow()
 
-        # Insert into MongoDB
         result = products_collection.insert_one(product_dict)
 
         # Return only the ID as per spec 
-        return ProductCreateResponse(id=str(result.inserted_id)) # Directly return the dictionary for FastAPI to serialize
+        return ProductCreateResponse(id=str(result.inserted_id))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error creating product: {str(e)}")
 
@@ -95,20 +90,18 @@ async def list_products(
         query_filter = {}
 
         if name:
-            # Use regex for partial name search (case-insensitive) [cite: 33]
+            # Use regex for partial name search
             query_filter["name"] = {"$regex": re.escape(name), "$options": "i"}
 
         if size:
             # Filter products where any of the 'sizes' sub-documents contains the specified size string
-            # This looks for products that have a size document where the 'size' field matches. 
             query_filter["sizes.size"] = size
 
         # Fetch products with pagination
-        # Sort by _id for consistent pagination [cite: 36]
         cursor = products_collection.find(query_filter).sort("_id", 1).skip(offset).limit(limit)
         products = []
         for product_doc in cursor:
-            # Manually map to ProductListingItem, handling _id to id [cite: 40, 46, 48]
+            # Manually map to ProductListingItem, handling _id to id conversion
             products.append(
                 ProductListingItem(
                     id=str(product_doc["_id"]),
@@ -117,11 +110,9 @@ async def list_products(
                 )
             )
 
-        # Calculate pagination info [cite: 53]
+        # Calculate pagination info
         next_offset = offset + limit if len(products) == limit else None
-        previous_offset = offset - limit if offset - limit >= 0 else -10 # Spec says -10 if no previous [cite: 56]
-        # In a real app, 'next' and 'previous' would ideally point to actual URLs or specific IDs
-        # Here, we're mimicking the "next page starting index" with offsets.
+        previous_offset = offset - limit if offset - limit >= 0 else -10 
 
         # Ensure "previous" is null/None if it's the first page
         if offset == 0:
@@ -225,7 +216,6 @@ async def get_user_orders(
                     "items": {
                         "$push": {
                             "productDetails": {
-                                # CHANGE HERE: Project it as '_id' for internal Pydantic validation
                                 "_id": "$itemProductDetails._id",
                                 "name": "$itemProductDetails.name"
                             },
@@ -235,13 +225,9 @@ async def get_user_orders(
                 }
             },
             {"$project": {
-                # CHANGE HERE: Project the top-level order ID as '_id' for internal Pydantic validation
                 "_id": "$_id", # Keep _id for the top-level OrderResponse model
                 "items": 1,
                 "total": 1
-                # No need to explicitly map to "id": {"$toString": "$_id"} here.
-                # Pydantic's `OrderResponse(id: Annotated[PyObjectId, BeforeValidator(str)] = Field(alias="_id", ...))`
-                # will handle mapping the incoming '_id' to its 'id' field for the final JSON output.
             }}
         ]
 
@@ -250,13 +236,11 @@ async def get_user_orders(
 
         orders_response_list = []
         for order_doc in orders_data_raw:
-            # Here, OrderResponse(**order_doc) will correctly receive '_id' and map it to 'id'
-            # due to Field(alias="_id") and populate_by_name=True
             orders_response_list.append(OrderResponse(**order_doc))
 
                 # Calculate pagination info [cite: 111]
         next_offset = offset + limit if len(orders_response_list) == limit else None
-        previous_offset = offset - limit if offset - limit >= 0 else -10 # Spec says -10 if no previous [cite: 114]
+        previous_offset = offset - limit if offset - limit >= 0 else -10 # Spec says -10 if no previous
 
         if offset == 0:
             previous_offset = None
