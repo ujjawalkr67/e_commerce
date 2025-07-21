@@ -1,8 +1,11 @@
 import requests
 import json
+from dotenv import load_dotenv
+import os
+load_dotenv()
 
-# Base URL - replace with your deployed URL if not local
-BASE_URL = "http://localhost:8000"
+# Base URL - loaded from .env
+BASE_URL = os.getenv("BASE_URL", "http://localhost:8000")
 
 def test_create_product():
     """Test creating a product"""

@@ -8,6 +8,7 @@ from datetime import datetime
 import re
 from urllib.parse import quote_plus
 from bson import ObjectId
+from dotenv import load_dotenv
 
 from models import (
     ProductCreate, ProductCreateResponse, ProductListingItem, ProductListResponse, PaginationInfo,
@@ -22,14 +23,29 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# MongoDB connection
-#MONGODB_URL = os.getenv("mongodb+srv://ujjawalkr67:ujjawal@123@cluster0.u2hy0l7.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
-password = quote_plus("ujjawal@123")
-MONGODB_URL = f"mongodb+srv://ujjawalkr67:{password}@cluster0.u2hy0l7.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
-DATABASE_NAME = "ecommerce_db"
+load_dotenv()
+
+# --- MongoDB Connection ---
+# Retrieve individual components from environment variables
+MONGO_USERNAME = os.getenv("MONGO_USERNAME")
+MONGO_PASSWORD = os.getenv("MONGO_PASSWORD")
+MONGO_CLUSTER_URL = os.getenv("MONGO_CLUSTER_URL")
+MONGO_APP_NAME = os.getenv("MONGO_APP_NAME")
+MONGO_DATABASE_NAME = os.getenv("MONGO_DATABASE_NAME") # For the default database connection
+
+# Validate that all required environment variables are set
+if not all([MONGO_USERNAME, MONGO_PASSWORD, MONGO_CLUSTER_URL, MONGO_APP_NAME, MONGO_DATABASE_NAME]):
+    raise ValueError("One or more MongoDB environment variables (MONGO_USERNAME, MONGO_PASSWORD, MONGO_CLUSTER_URL, MONGO_APP_NAME, MONGO_DATABASE_NAME) are not set. Please check your .env file.")
+
+# URL-encode the password
+encoded_password = quote_plus(MONGO_PASSWORD)
+
+# Construct the MongoDB URI
+MONGO_URI = f"mongodb+srv://{MONGO_USERNAME}:{encoded_password}@{MONGO_CLUSTER_URL}/?retryWrites=true&w=majority&appName={MONGO_APP_NAME}"
+
 try:
-    client = MongoClient(MONGODB_URL)
-    db = client[DATABASE_NAME]
+    client = MongoClient(MONGO_URI)
+    db = client[MONGO_DATABASE_NAME]
     products_collection = db.products
     orders_collection = db.orders
     
