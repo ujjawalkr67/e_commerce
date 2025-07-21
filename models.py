@@ -35,22 +35,21 @@ class ProductCreate(BaseModel):
 
 class ProductCreateResponse(BaseModel):
     id: Annotated[PyObjectId, BeforeValidator(str)] = Field(alias="_id", description="Unique ID of the created product")
-    # This ensures that when we return the response, _id from MongoDB is mapped to 'id'
-    # and when validating incoming data, it can accept both 'id' and '_id'
+
     class Config:
-        populate_by_name = True # Allows setting fields using either their actual name or alias
-        arbitrary_types_allowed = True # Needed for PyObjectId
-        json_encoders = {ObjectId: str} # Ensures ObjectId is serialized as str
+        populate_by_name = True 
+        arbitrary_types_allowed = True 
+        json_encoders = {ObjectId: str} 
 
 class ProductListingItem(BaseModel):
     id: Annotated[PyObjectId, BeforeValidator(str)] = Field(alias="_id", description="Unique ID of the product")
     name: str = Field(..., description="Product name")
     price: float = Field(..., description="Product price")
-    # Note: No 'sizes' field in the output for List Products API as per spec 
+    
     class Config:
-        populate_by_name = True # Allows assignment by field name (e.g., 'id') even if alias is '_id'
-        arbitrary_types_allowed = True # Needed for PyObjectId
-        json_encoders = {ObjectId: str} # Ensures ObjectId is serialized as str
+        populate_by_name = True 
+        arbitrary_types_allowed = True 
+        json_encoders = {ObjectId: str} 
 
 class PaginationInfo(BaseModel):
     next: Optional[str] = Field(None, description="Next page starting index/ID")
@@ -74,11 +73,10 @@ class OrderCreate(BaseModel):
 class OrderCreateResponse(BaseModel):
     id: Annotated[PyObjectId, BeforeValidator(str)] = Field(alias="_id", description="Unique ID of the created order")
 
-    # Add the Config class to handle ObjectId and aliases correctly for outbound data
     class Config:
-        populate_by_name = True # Allows setting fields using either their actual name or alias
-        arbitrary_types_allowed = True # Needed for PyObjectId
-        json_encoders = {ObjectId: str} # Ensures ObjectId is serialized as str
+        populate_by_name = True
+        arbitrary_types_allowed = True 
+        json_encoders = {ObjectId: str} 
 
 
 class ProductDetailsInOrder(BaseModel):
