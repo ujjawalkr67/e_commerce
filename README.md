@@ -1,0 +1,257 @@
+# 🚀 HROne E-commerce Backend
+
+This repository contains a sample e-commerce backend application built with FastAPI and Python, storing data in MongoDB. It provides core APIs for managing products and processing user orders, mimicking functionalities found in platforms like Flipkart or Amazon.
+
+## ✨ Features
+
+  * **Product Management**:
+      * Create new products with details like name, price, and available sizes with their quantities.
+      * List all products with powerful filtering options (by name with partial/regex search, by available size) and pagination.
+  * **Order Processing**:
+      * Create new orders for users, including multiple product items and their quantities.
+      * Retrieve a list of all orders for a specific user, with embedded product details obtained via database lookups, and pagination.
+  * **Robust Data Storage**: Utilizes MongoDB for flexible and scalable NoSQL data persistence.
+  * **Clean Architecture**: Built with FastAPI for high performance and easy API development, adhering to RESTful principles.
+  * **Data Validation**: Leverages Pydantic models for strict request and response body validation.
+
+## 🛠️ Tech Stack
+
+  * **Python**: Version 3.10+ (tested with 3.12)
+  * **FastAPI**: Modern, fast (high-performance), web framework for building APIs with Python 3.7+ based on standard Python type hints.
+  * **MongoDB**: NoSQL database for storing application data. (You can use MongoDB Atlas Free Cluster for easy setup).
+  * **Pymongo**: Python driver for MongoDB.
+  * **Uvicorn**: ASGI server to run the FastAPI application.
+
+## 📦 Getting Started
+
+Follow these steps to get your local development environment set up.
+
+### Prerequisites
+
+  * **Python 3.10+**: Download and install from [python.org](https://www.python.org/).
+  * **MongoDB**:
+      * **Local Installation**: Download and install MongoDB Community Server from [mongodb.com](https://www.mongodb.com/try/download/community).
+      * **MongoDB Atlas (Recommended)**: Create a free tier cluster on [MongoDB Atlas](https://cloud.mongodb.com/). This provides a cloud-hosted database without local setup hassles.
+
+### Installation
+
+1.  **Clone the Repository:**
+
+    ```bash
+    git clone https://github.com/your-username/your-repo-name.git
+    cd your-repo-name
+    ```
+
+    (Replace `your-username/your-repo-name` with your actual repository details)
+
+2.  **Create a Virtual Environment:** (Highly recommended for dependency management)
+
+    ```bash
+    python -m venv venv
+    ```
+
+3.  **Activate the Virtual Environment:**
+
+      * **On Windows:**
+        ```bash
+        .\venv\Scripts\activate
+        ```
+      * **On macOS/Linux:**
+        ```bash
+        source venv/bin/activate
+        ```
+
+4.  **Install Dependencies:**
+
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+    *(If `requirements.txt` doesn't exist, create it by running `pip freeze > requirements.txt` after installing dependencies manually, or install them one by one: `pip install fastapi uvicorn pymongo pydantic`)*
+
+### Database Configuration
+
+Your application connects to MongoDB. You'll need to set up your MongoDB connection string.
+
+1.  **Open `main.py`** (or your main application file).
+2.  **Locate the MongoDB connection section.** It will look something like this:
+    ```python
+    try:
+        client = MongoClient("mongodb://localhost:27017/") # <-- CHANGE THIS
+        db = client["hronedb"] # <-- AND THIS (database name)
+        products_collection = db["products"]
+        orders_collection = db["orders"]
+        print("MongoDB connected successfully!")
+    except Exception as e:
+        print(f"Could not connect to MongoDB: {e}")
+    ```
+3.  **Update the `MongoClient` string** with your MongoDB connection URI.
+      * **For local MongoDB:** `mongodb://localhost:27017/` (default)
+      * **For MongoDB Atlas:** Copy the "Connect" URI from your Atlas cluster, typically starting with `mongodb+srv://`. Remember to replace `<username>`, `<password>`, and optionally `<dbname>` in the URI.
+
+## 🚀 Running the Application
+
+Once everything is set up, run the FastAPI application using Uvicorn:
+
+```bash
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
+
+  * `main`: Refers to your Python file (`main.py`).
+  * `app`: Refers to the `FastAPI()` instance within that file.
+  * `--reload`: Enables auto-reloading on code changes (great for development).
+  * `--host 0.0.0.0`: Makes the server accessible externally (useful for deployment or Docker).
+  * `--port 8000`: Specifies the port to run on.
+
+You should see output indicating that the Uvicorn server is running on `http://0.0.0.0:8000`.
+
+## 🧪 API Endpoints and Testing
+
+The application exposes the following RESTful API endpoints. You can test them using tools like `curl` (command-line), Postman, Insomnia, or the provided Python `requests` script.
+
+The API documentation (Swagger UI) is automatically generated by FastAPI and available at: `http://localhost:8000/docs`
+
+### 1\. Create Product
+
+  * **Endpoint**: `/products`
+  * **Method**: `POST`
+  * **Description**: Creates a new product.
+  * **Request Body Example**:
+    ```json
+    {
+      "name": "Fancy Gadget",
+      "price": 99.99,
+      "sizes": [
+        {"size": "Small", "quantity": 100},
+        {"size": "Medium", "quantity": 75}
+      ]
+    }
+    ```
+  * **Response Body Example**:
+    ```json
+    {
+      "id": "60c72b2f9b1d4c001c8c4a7e"
+    }
+    ```
+
+### 2\. List Products
+
+  * **Endpoint**: `/products`
+  * **Method**: `GET`
+  * **Description**: Retrieves a list of products. Supports filtering and pagination.
+  * **Query Parameters (Optional)**:
+      * `name`: Filter by product name (supports partial/regex search, case-insensitive).
+      * `size`: Filter for products that have a specific size available.
+      * `limit`: Maximum number of products to return (default: 10, max: 100).
+      * `offset`: Number of products to skip for pagination (default: 0).
+  * **Example Request**: `http://localhost:8000/products?name=shirt&size=M&limit=5&offset=0`
+  * **Response Body Example**:
+    ```json
+    {
+      "data": [
+        {
+          "id": "60c72b2f9b1d4c001c8c4a7e",
+          "name": "Stylish T-Shirt",
+          "price": 25.99
+        }
+      ],
+      "page": {
+        "next": "10",
+        "limit": 1,
+        "previous": null
+      }
+    }
+    ```
+
+### 3\. Create Order
+
+  * **Endpoint**: `/orders`
+  * **Method**: `POST`
+  * **Description**: Creates a new order for a user.
+  * **Request Body Example**:
+    *(Note: `productId` must be a valid ID of an existing product)*
+    ```json
+    {
+      "userId": "customer_xyz",
+      "items": [
+        {
+          "productId": "60c72b2f9b1d4c001c8c4a7e",
+          "qty": 2
+        },
+        {
+          "productId": "60c72b2f9b1d4c001c8c4a7f",
+          "qty": 1
+        }
+      ]
+    }
+    ```
+  * **Response Body Example**:
+    ```json
+    {
+      "id": "60c72b2f9b1d4c001c8c4a80"
+    }
+    ```
+
+### 4\. Get List of Orders
+
+  * **Endpoint**: `/orders/{user_id}`
+  * **Method**: `GET`
+  * **Description**: Retrieves all orders placed by a specific user. Product details are embedded in the response.
+  * **URL Parameter**:
+      * `user_id`: The ID of the user whose orders are to be retrieved.
+  * **Query Parameters (Optional)**:
+      * `limit`: Maximum number of orders to return (default: 10, max: 100).
+      * `offset`: Number of orders to skip for pagination (default: 0).
+  * **Example Request**: `http://localhost:8000/orders/customer_xyz?limit=10&offset=0`
+  * **Response Body Example**:
+    ```json
+    {
+      "data": [
+        {
+          "id": "60c72b2f9b1d4c001c8c4a80",
+          "items": [
+            {
+              "productDetails": {
+                "id": "60c72b2f9b1d4c001c8c4a7e",
+                "name": "Stylish T-Shirt"
+              },
+              "qty": 2
+            }
+          ],
+          "total": 51.98
+        }
+      ],
+      "page": {
+        "next": null,
+        "limit": 1,
+        "previous": null
+      }
+    }
+    ```
+
+### Automated Testing Script
+
+For quick and easy testing of all APIs, a Python script `test_api.py` is provided in the repository.
+
+1.  **Ensure your FastAPI app is running.**
+2.  **Open a new terminal** in the project root.
+3.  **Run the test script:**
+    ```bash
+    python test_api.py
+    ```
+    This script will:
+      * Create a sample product.
+      * List products with and without filters/pagination.
+      * Create a sample order using the generated product ID.
+      * Retrieve orders for the user who placed the order.
+        It will print the status codes and full JSON responses for each API call, allowing you to verify the output against the specifications.
+
+## 🤝 Contribution
+
+Feel free to fork the repository, open issues, or submit pull requests.
+
+## 📄 License
+
+This project is open-source and available under the [MIT License](https://opensource.org/licenses/MIT).
+
+-----
